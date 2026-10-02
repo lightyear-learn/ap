@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apartment Fair Queue System</title>
+    <link rel="manifest" href="/manifest.json">
+</head>
+body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f4f4f9; }
+    .card { background: white; padding: 20px; margin: 10px auto; max-width: 400px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    button { background: #28a745; color: white; border: none; padding: 10px 20px; font-size: 16px; border-radius: 5px; cursor: pointer; }
+    button:active { background: #218838; }
+</style>
+<body>
+    <div class="card">
+        <h2>Apartment Event Queue</h2>
+        <p>No personal data is collected or shared.</p>
+        <div id="status">Status: Not Registered</div>
+        <br>
+        <button id="get-token-btn">Get My Token</button>
+    </div>
+
+    <div class="card">
+        <h3>Live Queue Board</h3>
+        <h1 id="current-serving" style="color: #007bff;">--</h1>
+        <p>Currently Serving Token</p>
+    </div>
+
+    <!-- Service Worker Registration for PWA / Notifications -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('Queue Service Worker active.'));
+        }
+
+        const getTokenBtn = document.getElementById('get-token-btn');
+        const statusDiv = document.getElementById('status');
+        const currentServingDisplay = document.getElementById('current-serving');
+
+        // Generate a completely anonymous local ticket number (e.g., #104)
+        getTokenBtn.addEventListener('click', async () => {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert('Notification permission is required to alert you when your turn arrives.');
+                return;
+            }
+
+            // Generate anonymous local token
+            const randomToken = Math.floor(100 + Math.random() * 900);
+            localStorage.setItem('my_apartment_token', randomToken);
+            
+            statusDiv.innerHTML = `Your Assigned Anonymous Token: <b>#${randomToken}</b>`;
+            getTokenBtn.style.display = 'none';
+            alert(`Token #${randomToken} saved securely on your device! Keep this app open or backgrounded.`);
+        });
+
+        // Simulate local queue listening (Polling a lightweight shared file or local state)
+        setInterval(() => {
+            const myToken = localStorage.getItem('my_apartment_token');
+            // In a real local setup, fetch a tiny public JSON file or shared state tracking the current active number
+            const activeTokenServing = localStorage.getItem('global_serving_token') || '--';
+            
+            currentServingDisplay.innerText = `#${activeTokenServing}`;
+
+            if (myToken && activeTokenServing === myToken) {
+                if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                    navigator.serviceWorker.controller.postMessage({
+                        type: 'TRIGGER_ALERT',
+                        token: myToken
+                    });
+                }
+            }
+        }, 3000);
+    </script>
+</body>
+</html>
